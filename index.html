@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Pumping Test - Hydrogeologist Pro v2.0</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.7.0/lib/browser/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Map Libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💧 Analisis Pumping Test - Professional Edition</h1>
+            <p>Advanced Hydrogeological Analysis Tool | v2.0</p>
+            <span class="badge">Validated by Senior Hydrogeologist</span>
+        </header>
+        
+        <div class="main-content">
+            <!-- Input Panel -->
+            <div class="input-panel">
+                <h2>📋 Input Parameters</h2>
+                
+                <!-- ==================== PROJECT INFORMATION FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">📁</span>
+                        <h3>Project Information</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-group">
+                            <label>Project Name</label>
+                            <input type="text" id="projectName" placeholder="Contoh: Uji Pompa Sumur BW-01">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Project No.</label>
+                                <input type="text" id="projectNo" placeholder="Contoh: P-2024-001">
+                            </div>
+                            <div class="form-group">
+                                <label>Client</label>
+                                <input type="text" id="client" placeholder="Nama Client">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="location" placeholder="Contoh: Jakarta">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== UNITS FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">📏</span>
+                        <h3>Units</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Length Unit</label>
+                                <select id="lengthUnit" onchange="handleUnitChange()">
+                                    <option value="m">Meter (m)</option>
+                                    <option value="cm">Centimeter (cm)</option>
+                                    <option value="mm">Millimeter (mm)</option>
+                                    <option value="ft">Feet (ft)</option>
+                                    <option value="inch">Inch (in)</option>
+                                    <option value="yard">Yard (yd)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Time Unit</label>
+                                <select id="timeUnit" onchange="handleUnitChange()">
+                                    <option value="s">Seconds (s)</option>
+                                    <option value="min">Minutes (min)</option>
+                                    <option value="hr">Hours (hr)</option>
+                                    <option value="day">Days (day)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-box" style="margin-top: 5px; padding: 8px;">
+                            <small>⚠️ Unit akan dikonversi otomatis ke m dan s untuk perhitungan</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== AQUIFER PROPERTIES FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">🪨</span>
+                        <h3>Aquifer Properties</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Thickness (b)</label>
+                                <input type="number" id="thickness" step="any" value="30" placeholder="30">
+                            </div>
+                            <div class="form-group">
+                                <label>Aquifer Type</label>
+                                <select id="aquiferType" onchange="updateAquiferFields()">
+                                    <option value="unknown">Unknown</option>
+                                    <option value="confined">Confined (Tertekan)</option>
+                                    <option value="unconfined">Unconfined (Tidak Tertekan)</option>
+                                    <option value="leaky">Leaky (Bocor)</option>
+                                    <option value="fracture">Fracture (Rekahan)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Barometric Efficiency (BE) -->
+                        <div class="form-group">
+                            <label>Barometric Efficiency (BE)</label>
+                            <div class="form-row">
+                                <div class="form-group" style="width: 70%;">
+                                    <input type="number" id="barometricEfficiency" step="0.01" min="0" max="1" value="0.8" placeholder="0.8">
+                                </div>
+                                <div class="form-group" style="width: 28%;">
+                                    <select id="beType">
+                                        <option value="fraction">Fraction</option>
+                                        <option value="percentage">Percentage</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <small class="help-text">Rasio respon muka air terhadap perubahan tekanan barometrik</small>
+                        </div>
+                        
+                        <!-- Additional fields for specific aquifer types -->
+                        <div id="leakyFields" style="display:none;">
+                            <div class="form-group">
+                                <label>Leaky Layer Thickness b' (m)</label>
+                                <input type="number" id="thicknessLeaky" step="any" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Vertical Conductivity Kv (m/s)</label>
+                                <input type="number" id="verticalK" step="any" value="1e-7">
+                            </div>
+                        </div>
+                        
+                        <div id="fractureFields" style="display:none;">
+                            <div class="form-group">
+                                <label>Fracture Spacing (m)</label>
+                                <input type="number" id="fractureSpacing" step="any" value="2">
+                            </div>
+                            <div class="form-group">
+                                <label>Fracture Aperture (mm)</label>
+                                <input type="number" id="fractureAperture" step="any" value="0.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== PUMPING TEST FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">🚰</span>
+                        <h3>Pumping Test</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Well Name / ID</label>
+                                <input type="text" id="wellId" value="BW-01" placeholder="Contoh: PW-01">
+                            </div>
+                            <div class="form-group">
+                                <label>Analyst Name</label>
+                                <input type="text" id="analyst" placeholder="Nama Anda">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="testDate">
+                            </div>
+                            <div class="form-group">
+                                <label>Time</label>
+                                <input type="time" id="testTime" value="08:00">
+                            </div>
+                        </div>
+                        
+                        <!-- Data Type Selection -->
+                        <div class="form-group">
+                            <label>Tipe Data Input</label>
+                            <select id="dataType" onchange="handleDataTypeChange()">
+                                <option value="drawdown">Drawdown Langsung (s)</option>
+                                <option value="waterlevel">Water Level (h) - dengan initial level</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Initial Level Field -->
+                        <div id="initialLevelContainer" style="display:none;" class="form-group">
+                            <label>Initial Water Level (h₀)</label>
+                            <input type="number" id="initialLevel" step="any" placeholder="25.5">
+                            <small class="help-text">Elevasi muka air sebelum pumping</small>
+                        </div>
+                        
+                        <!-- Info Box for Water Level -->
+                        <div id="waterLevelInfo" class="info-box" style="display:none;">
+                            <p><strong>ℹ️ Info:</strong> Data water level akan otomatis dikonversi ke drawdown: <code>s = h₀ - h(t)</code></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== WELL CONSTRUCTION FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">🕳️</span>
+                        <h3>Well Construction</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Well Radius (rw)</label>
+                                <input type="number" id="wellRadius" step="any" value="0.15" placeholder="0.15">
+                            </div>
+                            <div class="form-group">
+                                <label>Well Depth (m)</label>
+                                <input type="number" id="wellDepth" step="any" value="50" placeholder="50">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Casing Radius</label>
+                                <input type="number" id="casingRadius" step="any" value="0.1" placeholder="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Screen Length (m)</label>
+                                <input type="number" id="screenLength" step="any" value="10" placeholder="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== PUMPING PARAMETERS FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">⚙️</span>
+                        <h3>Pumping Parameters</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Discharge Rate (Q)</label>
+                                <input type="number" id="discharge" step="any" value="0.01" placeholder="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Distance to Obs. Well (r)</label>
+                                <input type="number" id="distance" step="any" value="15" placeholder="15">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Analysis Method</label>
+                            <select id="method" onchange="updateMethodFields()">
+                                <option value="cooper-jacob">Cooper-Jacob (Late Time)</option>
+                                <option value="theis">Theis (Curve Matching)</option>
+                                <option value="recovery">Recovery Test</option>
+                                <option value="step-drawdown">Step Drawdown Test</option>
+                                <option value="hantush">Hantush (Leaky Aquifer)</option>
+                                <option value="neuman">Neuman (Unconfined)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="stepFields" style="display:none;">
+                            <div class="form-group">
+                                <label>Number of Steps</label>
+                                <input type="number" id="numSteps" value="3" min="2" max="5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ==================== WELL LOCATION FRAME ==================== -->
+                <div class="frame-card">
+                    <div class="frame-header">
+                        <span class="frame-icon">📍</span>
+                        <h3>Well Location (UTM)</h3>
+                    </div>
+                    <div class="frame-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Easting (m)</label>
+                                <input type="number" id="easting" placeholder="789123" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Northing (m)</label>
+                                <input type="number" id="northing" placeholder="945678" step="1">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>UTM Zone</label>
+                                <select id="utmZone">
+                                    <option value="48">Zone 48S</option>
+                                    <option value="49">Zone 49S</option>
+                                    <option value="50" selected>Zone 50S</option>
+                                    <option value="51">Zone 51S</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Well Type</label>
+                                <select id="wellType">
+                                    <option value="pumping">Pumping Well</option>
+                                    <option value="observation">Observation Well</option>
+                                    <option value="piezometer">Piezometer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" style="width: auto; margin-top: 5px;" onclick="addWellLocation()">+ Add to Map</button>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="calculate()">📊 Calculate Parameters</button>
+                <button class="btn btn-secondary" onclick="loadSampleData()">📥 Load Sample Data</button>
+                <button class="btn btn-warning" onclick="clearData()">🗑️ Clear All</button>
+                
+                <div id="validationMessages" class="validation-warning" style="display:none;"></div>
+            </div>
+            
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div class="card">
+                    <h2>📈 Hasil Analisis</h2>
+                    
+                    <div class="tab-nav">
+                        <button class="tab-btn active" onclick="switchTab('results')">Parameter</button>
+                        <button class="tab-btn" onclick="switchTab('charts')">Grafik</button>
+                        <button class="tab-btn" onclick="switchTab('data')">Data</button>
+                        <button class="tab-btn" onclick="switchTab('quality')">Quality Check</button>
+                        <button class="tab-btn" onclick="switchTab('map')">🗺️ Peta Sumur</button>
+                        <button class="tab-btn" onclick="switchTab('report')">📄 Report</button>
+                    </div>
+                    
+                    <!-- Results Tab -->
+                    <div id="resultsTab" class="tab-pane active">
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="value" id="transmisivity">-</div>
+                                <div class="unit" id="transmisivityUnit">m²/s</div>
+                                <div class="label">Transmisivitas (T)</div>
+                                <div class="confidence-interval" id="T_ci"></div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="storativity">-</div>
+                                <div class="unit">dimensi</div>
+                                <div class="label">Storativitas (S)</div>
+                                <div class="confidence-interval" id="S_ci"></div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="hydraulicConductivity">-</div>
+                                <div class="unit" id="kUnit">m/s</div>
+                                <div class="label">Konduktivitas Hidraulik (K)</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="radiusInfluence">-</div>
+                                <div class="unit" id="rUnit">m</div>
+                                <div class="label">Radius of Influence (R)</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="specificCapacity">-</div>
+                                <div class="unit" id="scUnit">m²/s</div>
+                                <div class="label">Kapasitas Spesifik</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="skinFactor">-</div>
+                                <div class="unit">dimensi</div>
+                                <div class="label">Skin Factor</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="value" id="barometricEfficiencyResult">-</div>
+                                <div class="unit">%</div>
+                                <div class="label">Barometric Efficiency</div>
+                            </div>
+                        </div>
+                        
+                        <div id="stepResults" style="display:none; margin-top: 20px;">
+                            <h3>Step Drawdown Analysis</h3>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="stepTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Step</th>
+                                            <th>Q (m³/s)</th>
+                                            <th>s (m)</th>
+                                            <th>B (s/m²)</th>
+                                            <th>C (s²/m⁵)</th>
+                                            <th>n</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="leakyResults" style="display:none; margin-top: 20px;">
+                            <h3>Leaky Aquifer Parameters</h3>
+                            <div class="results-grid">
+                                <div class="result-item">
+                                    <div class="value" id="leakageFactor">-</div>
+                                    <div class="unit">m</div>
+                                    <div class="label">Leakage Factor (B)</div>
+                                </div>
+                                <div class="result-item">
+                                    <div class="value" id="verticalHydraulicConductivity">-</div>
+                                    <div class="unit">m/s</div>
+                                    <div class="label">Kv (Vertical)</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="fractureResults" style="display:none; margin-top: 20px;">
+                            <h3>Fracture Parameters</h3>
+                            <div class="results-grid">
+                                <div class="result-item">
+                                    <div class="value" id="fracturePermeability">-</div>
+                                    <div class="unit">m²</div>
+                                    <div class="label">Fracture Permeability</div>
+                                </div>
+                                <div class="result-item">
+                                    <div class="value" id="fracturePorosity">-</div>
+                                    <div class="unit">%</div>
+                                    <div class="label">Fracture Porosity</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Tab -->
+                    <div id="chartsTab" class="tab-pane">
+                        <div class="chart-container">
+                            <canvas id="drawdownChart"></canvas>
+                        </div>
+                        <div class="chart-container" style="margin-top: 20px;">
+                            <canvas id="diagnosticChart"></canvas>
+                        </div>
+                        <div class="chart-container" style="margin-top: 20px;">
+                            <canvas id="residualChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Tab -->
+                    <div id="dataTab" class="tab-pane">
+                        <div class="table-wrapper">
+                            <table class="data-table" id="inputTable">
+                                <thead id="tableHeader">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Waktu (detik)</th>
+                                        <th>Drawdown (m)</th>
+                                        <th>t/s</th>
+                                        <th>log(t)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button class="btn btn-primary" style="width: auto;" onclick="addDataRow()">+ Tambah Data</button>
+                            <button class="btn btn-secondary" style="width: auto;" onclick="openImportModal()">📤 Import Excel</button>
+                            <button class="btn btn-secondary" style="width: auto;" onclick="exportToExcel()">📥 Export Excel</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quality Tab -->
+                    <div id="qualityTab" class="tab-pane">
+                        <div id="qualityChecks"></div>
+                    </div>
+                    
+                    <!-- Map Tab -->
+                    <div id="mapTab" class="tab-pane">
+                        <div id="map" style="height: 500px; width: 100%; border-radius: 10px; margin-bottom: 20px;"></div>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button class="btn btn-secondary" style="width: auto;" onclick="exportToKML()">
+                                📍 Export ke Google Earth (KML)
+                            </button>
+                            <button class="btn btn-secondary" style="width: auto;" onclick="fitMapToBounds()">
+                                🔍 Zoom ke Semua Sumur
+                            </button>
+                            <button class="btn btn-warning" style="width: auto;" onclick="clearAllWells()">
+                                🗑️ Hapus Semua
+                            </button>
+                        </div>
+                        
+                        <h3>📍 Daftar Sumur</h3>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="wellsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Easting</th>
+                                        <th>Northing</th>
+                                        <th>Zone</th>
+                                        <th>Tipe</th>
+                                        <th>Kedalaman</th>
+                                        <th>Drawdown</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wellsBody"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="margin-top: 15px; display: flex; gap: 20px; justify-content: center;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 20px; height: 20px; background: #e74c3c; border-radius: 50%; border: 2px solid white;"></div>
+                                <span>Sumur Pompa</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 20px; height: 20px; background: #3498db; border-radius: 50%; border: 2px solid white;"></div>
+                                <span>Sumur Observasi</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <div style="width: 20px; height: 20px; background: #f39c12; border-radius: 50%; border: 2px solid white;"></div>
+                                <span>Piezometer</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Report Tab -->
+                    <div id="reportTab" class="tab-pane">
+                        <div class="report-container" id="reportContainer">
+                            <div class="report-placeholder">
+                                <p>Klik tombol di bawah untuk generate laporan PDF</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+                            <button class="btn btn-secondary" style="width: auto;" onclick="generateReportPreview()">
+                                👁️ Preview Laporan
+                            </button>
+                            <button class="btn btn-primary" style="width: auto;" onclick="downloadPDF()">
+                                📥 Download PDF Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2>🔍 Interpretasi Hidrogeologi</h2>
+                    <div id="hydrogeologicalInterpretation">
+                        <p>Masukkan data dan klik "Hitung Parameter" untuk interpretasi komprehensif.</p>
+                    </div>
+                    <div id="recommendations" class="parameter-notes"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import Excel -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📤 Import Data dari Excel</h3>
+                <span class="close-modal" onclick="closeImportModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <button class="download-sample" onclick="downloadSampleExcel()">
+                    📥 Download Sample Excel Template
+                </button>
+                
+                <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+                    <i>📁</i>
+                    <p>Klik untuk upload file Excel</p>
+                    <small>Format: .xlsx, .xls, .csv</small>
+                </div>
+                
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleFileSelect(event)">
+                
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div id="previewArea" style="display: none;">
+                    <h4>Preview Data:</h4>
+                    <div class="preview-table" id="previewTable"></div>
+                    
+                    <h4>Opsi Import:</h4>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="overwriteData" checked>
+                            <label for="overwriteData">Timpa data yang ada</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="skipHeader" checked>
+                            <label for="skipHeader">Baris pertama adalah header</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="validateData" checked>
+                            <label for="validateData">Validasi data</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportModal()">Batal</button>
+                <button class="btn btn-primary" id="importBtn" onclick="importData()" disabled>Import Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
